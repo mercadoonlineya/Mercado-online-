@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado Online</title>
+    <style>
+        *{box-sizing:border-box;margin:0;padding:0;}
+        body{font-family:Arial,sans-serif;background:#f3f4f6;color:#222;}
+        .caja{background:white;width:90%;max-width:400px;padding:30px;border-radius:20px;text-align:center;box-shadow:0 5px 20px rgba(0,0,0,.15);}
+        #pantalla{min-height:100vh;display:flex;justify-content:center;align-items:center;}
+        .oculto{display:none !important;}
+        .logo-icon{display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;background:#ffe600;border-radius:50%;font-size:28px;margin-bottom:8px;}
+        .logo{font-size:30px;font-weight:bold;margin-bottom:10px;}
+        button{width:100%;padding:15px;margin-top:12px;border:0;border-radius:10px;background:#ffe600;color:#222;font-size:16px;font-weight:bold;cursor:pointer;}
+        button:hover{background:#f5d900;}
+        .gris{background:#555;color:white;}
+        .gris:hover{background:#444;}
+        .rojo{background:#dc2626;color:white;}
+        .verde{background:#16a34a;color:white;}
+        .verde:hover{background:#15803d;}
+        .azul{background:#2563eb;color:white;}
+        .azul:hover{background:#1d4ed8;}
+        input, select{width:100%;padding:14px;margin:8px 0;border:1px solid #ccc;border-radius:8px;font-size:16px;}
+        .mensaje{height:22px;margin:10px 0;font-weight:bold;}
+        .error{color:red;}
+        .exito{color:green;}
+        #mercado{display:none;}
+        header{background:#ffe600;padding:15px;text-align:center;position:sticky;top:0;}
+        nav{margin-top:10px;display:flex;justify-content:center;flex-wrap:wrap;gap:5px;}
+        nav button{width:auto;padding:8px 12px;margin:0;}
+        main{padding:20px;max-width:1200px;margin:auto;}
+        .tarjeta{background:white;padding:20px;border-radius:15px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
+        .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px;}
+        .producto{background:white;padding:12px;border-radius:12px;}
+        .producto img{width:100%;height:180px;object-fit:cover;border-radius:8px;}
+        .categoria{color:#777;font-size:13px;margin:5px 0;}
+        .precio{font-size:20px;font-weight:bold;margin:8px 0;color:#166534;}
+        .item{display:flex;gap:15px;padding:10px 0;border-bottom:1px solid #eee;align-items:center;}
+        .item img{width:70px;height:70px;object-fit:cover;border-radius:8px;}
+        .total{text-align:right;font-size:22px;margin-top:15px;font-weight:bold;}
+        .saldo{background:#ffe600;padding:15px;border-radius:12px;text-align:center;margin:15px 0;}
+        .compra-item{border-bottom:1px solid #eee;padding:12px 0;text-align:left;}
+        .compra-fecha{color:#666;font-size:14px;}
+        .compra-total{font-weight:bold;color:#166534;margin-top:5px;}
+        .retiro-datos{text-align:left;margin:15px 0;}
+        .retiro-datos label{display:block;margin:8px 0 4px;font-weight:bold;}
+    </style>
+</head>
+<body>
+    <div id="pantalla">
+        <div class="caja" id="inicio">
+            <div class="logo-icon">🛒</div>
+            <div class="logo">Mercado Online</div>
+            <h2>Bienvenido</h2>
+            <button onclick="mostrar('login')">🔐 Iniciar sesión</button>
+            <button class="gris" onclick="mostrar('registro')">📝 Crear cuenta</button>
+        </div>
+
+        <div class="caja oculto" id="registro">
+            <div class="logo-icon">🛒</div>
+            <div class="logo">Mercado Online</div>
+            <h2>Crear tu cuenta</h2>
+            <input type="email" id="correoReg" placeholder="Tu correo electrónico">
+            <input type="password" id="claveReg" placeholder="Tu contraseña (mínimo 6 caracteres)">
+            <div class="mensaje" id="msgReg"></div>
+            <button onclick="registrar()">CREAR CUENTA</button>
+            <button class="gris" onclick="mostrar('inicio')">Volver</button>
+        </div>
+
+        <div class="caja oculto" id="login">
+            <div class="logo-icon">🛒</div>
+            <div class="logo">Mercado Online</div>
+            <h2>Iniciar sesión</h2>
+            <input type="email" id="correoLog" placeholder="Tu correo electrónico">
+            <input type="password" id="claveLog" placeholder="Tu contraseña">
+            <div class="mensaje" id="msgLog"></div>
+            <button onclick="entrar()">ENTRAR</button>
+            <button class="gris" onclick="mostrar('inicio')">Volver</button>
+        </div>
+    </div>
+
+    <div id="mercado">
+        <header>
+            <h2>🛒 Mercado Online</h2>
+            <nav id="menuNavegacion"></nav>
+        </header>
+        <main id="contenido"></main>
+    </div>
+
+<script>
+const CORREO_ADMIN = "admin@tutienda.com";
+const CLAVE_ADMIN = "admin123";
+
+localStorage.removeItem('base_usuarios');
+
+let baseUsuarios = [];
+baseUsuarios.push({
+    correo: CORREO_ADMIN, clave: CLAVE_ADMIN, saldo: 0,
+    retiros: [], historialCompras: [], esAdmin: true
+});
+localStorage.setItem('base_usuarios', JSON.stringify(baseUsuarios));
+
+let correoActivo = null;
+let carrito = [];
+
+function mostrar(que){
+    document.querySelectorAll('.caja').forEach(c=>c.classList.add('oculto'));
+    document.getElementById(que).classList.remove('oculto');
+}
+
+function darUsuario(){
+    let todos = JSON.parse(localStorage.getItem('base_usuarios'));
+    return todos.find(u => u.correo === correoActivo);
+}
+
+function guardarCambios(usuario){
+    let todos = JSON.parse(localStorage.getItem('base_usuarios'));
+    let pos = todos.findIndex(u => u.correo === correoActivo);
+    todos[pos] = usuario;
+    localStorage.setItem('base_usuarios', JSON.stringify(todos));
+}
+
+function registrar(){
+    let correo = document.getElementById('correoReg').value.trim().toLowerCase();
+    let clave = document.getElementById('claveReg').value;
+    let msg = document.getElementById('msgReg');
+    let todos = JSON.parse(localStorage.getItem('base_usuarios'));
+
+    if(!correo || !clave){ msg.textContent='Completa todos los campos'; msg.className='mensaje error'; return; }
+    if(clave.length < 6){ msg.textContent='Mínimo 6 caracteres'; msg.className='mensaje error'; return; }
+    if(correo === CORREO_ADMIN){ msg.textContent='Solo para el dueño'; msg.className='mensaje error'; return; }
+    if(todos.find(u => u.correo === correo)){ msg.textContent='Ya existe esta cuenta'; msg.className='mensaje error'; return; }
+
+    todos.push({ correo, clave, saldo: 3000, retiros: [], historialCompras: [], esAdmin: false });
+    localStorage.setItem('base_usuarios', JSON.stringify(todos));
+    msg.textContent='✅ Cuenta creada'; msg.className='mensaje exito';
+    setTimeout(()=>mostrar('login'), 1000);
+}
+
+function entrar(){
+    let correo = document.getElementById('correoLog').value.trim().toLowerCase();
+    let clave = document.getElementById('claveLog').value;
+    let msg = document.getElementById('msgLog');
+    let todos = JSON.parse(localStorage.getItem('base_usuarios'));
+    let usu = todos.find(u => u.correo === correo && u.clave === clave);
+    if(!usu){ msg.textContent='Datos incorrectos'; msg.className='mensaje error'; return; }
+    
+    correoActivo = correo;
+    document.getElementById('pantalla').classList.add('oculto');
+    document.getElementById('mercado').style.display='block';
+    cargarMenu();
+    iniMercado();
+}
+
+function cargarMenu(){
+    let usu = darUsuario();
+    let menu = document.getElementById('menuNavegacion');
+    if(usu.esAdmin){
+        menu.innerHTML = `
+            <button onclick="iniMercado()">🏠 Inicio</button>
+            <button onclick="verProds()">📦 Productos</button>
+            <button onclick="verCarrito()">🛒 Carrito</button>
+            <button onclick="verRetiros()">💵 Retiros</button>
+            <button onclick="verHistorial()">🧾 Mis Compras</button>
+            <button class="azul" onclick="panelAdmin()">⚙️ ADMIN</button>
+            <button onclick="verCuenta()">👤 Cuenta</button>
+            <button onclick="salir()">🚪 Salir</button>`;
+    }else{
+        menu.innerHTML = `
+            <button onclick="iniMercado()">🏠 Inicio</button>
+            <button onclick="verProds()">📦 Productos</button>
+            <button onclick="verCarrito()">🛒 Carrito</button>
+            <button onclick="verRetiros()">💵 Retiros</button>
+            <button onclick="verHistorial()">🧾 Mis Compras</button>
+            <button onclick="verCuenta()">👤 Cuenta</button>
+            <button onclick="salir()">🚪 Salir</button>`;
+    }
+}
+
+function panelAdmin(){
+    document.getElementById('contenido').innerHTML = `
+    <div class="tarjeta"><h2>⚙️ Panel del Creador</h2>
+    <input type="email" id="buscarCorreo" placeholder="Correo del usuario">
+    <button class="azul" onclick="buscarUsuario()">🔍 Buscar</button>
+    <div id="resultadoBusqueda"></div></div>`;
+}
+function buscarUsuario(){
+    let correo = document.getElementById('buscarCorreo').value.trim().toLowerCase();
+    let todos = JSON.parse(localStorage.getItem('base_usuarios'));
+    let usu = todos.find(u => u.correo === correo && !u.esAdmin);
+    let caja = document.getElementById('resultadoBusqueda');
+    if(!usu){ caja.innerHTML = `<p style="color:red;">❌ No encontrado</p>`; return; }
+    caja.innerHTML = `<hr><p>Correo: ${usu.correo}</p><p>Saldo: $${usu.saldo.toLocaleString("es-CO")}</p>
+    <input type="number" id="valor" placeholder="Agregar/quitar saldo">
+    <button class="verde" onclick="cambiarSaldo('${usu.correo}')">✅ Aplicar</button>`;
+}
+function cambiarSaldo(correo){
+    let val = Number(document.getElementById('valor').value);
+    let todos = JSON.parse(localStorage.getItem('base_usuarios'));
+    let idx = todos.findIndex(u => u.correo === correo);
+    todos[idx].saldo += val;
+    localStorage.setItem('base_usuarios', JSON.stringify(todos));
+    alert(`✅ Nuevo saldo: $${todos[idx].saldo.toLocaleString("es-CO")}`);
+    panelAdmin();
+}
+
+function iniMercado(){
+    let usu = darUsuario();
+    document.getElementById('contenido').innerHTML=`
+    <div class="tarjeta" style="text-align:center;padding:40px 20px;">
+        <div class="logo-icon">🛒</div>
+        <h2>¡Bienvenido!</h2>
+        <p>Tu correo: <strong>${usu.correo}</strong></p>
+        <p>Tu saldo: <strong>$${usu.saldo.toLocaleString("es-CO")}</strong></p>
+        <button onclick="verProds()">🛍️ Ir a comprar</button>
+    </div>`;
+}
+
+const productos = [
+    {id:1, nombre:"Goma de borrar", categoria:"Papelería", precio:3000, imagen:"https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=400"},
+    {id:2, nombre:"Lápiz negro", categoria:"Papelería", precio:3500, imagen:"https://images.unsplash.com/photo-1596497180689-f34b0d1b959b?auto=format&fit=crop&w=400"},
+    {id:3, nombre:"Chocolate", categoria:"Alimentos", precio:4200, imagen:"https://images.unsplash.com/photo-1599599810769-bcde5a160d32?auto=format&fit=crop&w=400"},
+    {id:4, nombre:"Bolígrafo", categoria:"Papelería", precio:5900, imagen:"https://images.unsplash.com/photo-1585336262938-317a82c1d429?auto=format&fit=crop&w=400"},
+    {id:5, nombre:"Agua mineral", categoria:"Bebidas", precio:7500, imagen:"https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=400"},
+    {id:6, nombre:"Cuaderno pequeño", categoria:"Papelería", precio:9900, imagen:"https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400"},
+    {id:7, nombre:"Gorra básica", categoria:"Ropa", precio:19900, imagen:"https://images.unsplash.com/photo-1588850561484-6c0f4405b5d9?auto=format&fit=crop&w=400"},
+    {id:8, nombre:"Audífonos básicos", categoria:"Tecnología", precio:29900, imagen:"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=400"},
+    {id:9, nombre:"Mochila sencilla", categoria:"Accesorios", precio:45000, imagen:"https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400"},
+    {id:10, nombre:"Tenis deportivos", categoria:"Calzado", precio:189900, imagen:"https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400"},
+    {id:11, nombre:"Reloj inteligente", categoria:"Tecnología", precio:249900, imagen:"https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400"},
+    {id:12, nombre:"Teléfono inteligente", categoria:"Tecnología", precio:1299900, imagen:"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=400"}
+];
+
+function verProds(){
+    let html = `<div class="tarjeta"><h2>📦 Productos</h2></div><div class="grid">`;
+    productos.forEach(p => {
+        html += `<div class="producto"><img src="${p.imagen}"><div class="categoria">${p.categoria}</div><h4>${p.nombre}</h4><div class="precio">$${p.precio.toLocaleString("es-CO")}</div><button onclick="agregar(${p.id})">🛒 Agregar</button></div>`;
+    });
+    html += `</div>`; document.getElementById('contenido').innerHTML = html;
+}
+function agregar(id){ carrito.push(productos.find(x=>x.id===id)); alert(`✅ Agregado`); }
+function quitar(i){ carrito.splice(i,1); verCarrito(); }
+
+function verCarrito(){
+    let usu = darUsuario();
+    if(carrito.length === 0){
+        document.getElementById('contenido').innerHTML = `<div class="tarjeta" style="text-align:center;"><h3>🛒 Carrito vacío</h3><button onclick="verProds()">Ver productos</button></div>`;
+        return;
+    }
+    let total = carrito.reduce((s,x)=>s+x.precio,0);
+    let html = `<div class="tarjeta"><h2>🛒 Tu carrito</h2>`;
+    carrito.forEach((x,i)=>{ html += `<div class="item"><img src="${x.imagen}"><div><strong>${x.nombre}</strong><p>$${x.precio.toLocaleString("es-CO")}</p><button class="rojo" style="width:auto;padding:8px;" onclick="quitar(${i})">Quitar</button></div></div>`; });
+    html += `<div class="total">Total: $${total.toLocaleString("es-CO")}</div><p>Tu saldo: $${usu.saldo.toLocaleString("es-CO")}</p><button onclick="pagar()">💳 CONFIRMAR PAGO</button></div>`;
+    document.getElementById('contenido').innerHTML = html;
+}
+
+function pagar(){
+    let usu = darUsuario();
+    let total = carrito.reduce((s,x)=>s+x.precio,0);
+
+    if(total > usu.saldo){
+        alert(`❌ No tienes suficiente saldo\nTienes: $${usu.saldo.toLocaleString("es-CO")}\nNecesitas: $${total.toLocaleString("es-CO")}`);
+        return;
+    }
+
+    usu.historialCompras.unshift({
+        fecha: new Date().toLocaleString("es-CO"),
+        productos: [...carrito],
+        total: total
+    });
+    usu.saldo -= total;
+
+    guardarCambios(usu);
+    carrito = [];
+    
+    alert(`✅ ¡COMPRA REALIZADA! 🎉\nPuedes verla en "Mis Compras"`);
+    iniMercado();
+}
+
+function verHistorial(){
+    let usu = darUsuario();
+    if(!usu.historialCompras || usu.historialCompras.length === 0){
+        document.getElementById('contenido').innerHTML = `<div class="tarjeta" style="text-align:center;"><h3>🧾 No tienes compras aún</h3><button onclick="verProds()">Ir a comprar</button></div>`;
+        return;
+    }
+    let html = `<div class="tarjeta"><h2>🧾 Historial de Compras</h2>`;
+    usu.historialCompras.forEach(c => {
+        html += `<div class="compra-item"><div class="compra-fecha">📅 ${c.fecha}</div>`;
+        c.productos.forEach(p => html += `<div style="padding-left:10px;">• ${p.nombre} - $${p.precio.toLocaleString("es-CO")}</div>`);
+        html += `<div class="compra-total">Total: $${c.total.toLocaleString("es-CO")}</div></div>`;
+    });
+    html += `</div>`;
+    document.getElementById('contenido').innerHTML = html;
+}
+
+function verRetiros(){
+    let usu = darUsuario();
+    document.getElementById('contenido').innerHTML=`
+    <div class="tarjeta"><h2>💵 Retiros</h2>
+    <div class="saldo"><p>Saldo disponible</p><h2>$${usu.saldo.toLocaleString("es-CO")}</h2></div>
+    <p>Mínimo $2.000 COP</p>
+
+    <div class="retiro-datos">
+        <label>Monto a retirar:</label>
+        <input type="number" id="montoRetiro" min="2000" placeholder="Valor del retiro">
+
+        <label>Banco o billetera:</label>
+        <select id="bancoRetiro">
+            <option value="">Selecciona una opción</option>
+            <option value="Bancolombia">Bancolombia</option>
+            <option value="Davivienda">Davivienda</option>
+            <option value="BBVA">BBVA</option>
+            <option value="Banco de Bogotá">Banco de Bogotá</option>
+            <option value="Nequi">Nequi</option>
+            <option value="Daviplata">Daviplata</option>
+            <option value="Otro">Otro banco</option>
+        </select>
+
+        <label>Número de cuenta o celular:</label>
+        <input type="text" id="cuentaRetiro" placeholder="Ej: 3121234567 o 123456789">
+
+        <label>Tipo de cuenta:</label>
+        <select id="tipoCuenta">
+            <option value="Ahorros">Cuenta de Ahorros</option>
+            <option value="Corriente">Cuenta Corriente</option>
+            <option value="Nequi">Nequi</option>
+            <option value="Daviplata">Daviplata</option>
+        </select>
+    </div>
+
+    <button class="verde" onclick="hacerRetiro()">✅ Solicitar Retiro</button></div>`;
+}
+function hacerRetiro(){
+    let usu = darUsuario();
+    let monto = Number(document.getElementById('montoRetiro').value);
+    let banco = document.getElementById('bancoRetiro').value;
+    let cuenta = document.getElementById('cuentaRetiro').value.trim();
+    let tipo = document.getElementById('tipoCuenta').value;
+
+    if(!monto || !banco || !cuenta || monto<2000 || monto>usu.saldo){ 
+        alert('Completa todos los datos correctamente'); 
+        return; 
+    }
+    usu.saldo -= monto;
+    usu.retiros.unshift({
+        valor:monto, fecha:new Date().toLocaleString("es-CO"), 
+        banco:banco, cuenta:cuenta, tipo:tipo, estado:'Pendiente'
+    });
+    guardarCambios(usu);
+    alert(`✅ Retiro solicitado:\nMonto: $${monto.toLocaleString("es-CO")}\nA: ${banco} - ${cuenta}`);
+    iniMercado();
+}
+
+function verCuenta(){
+    let usu = darUsuario();
+    document.getElementById('contenido').innerHTML = `
+    <div class="tarjeta" style="text-align:center;"><h3>👤 Tu Cuenta</h3><p>Correo: ${usu.correo}</p></div>
+    <div class="saldo"><p>Saldo disponible</p><h2>$${usu.saldo.toLocaleString("es-CO")}</h2></div>
+    <div class="tarjeta"><button class="gris" onclick="salir()">🚪 Cerrar sesión</button></div>`;
+}
+
+function salir(){
+    correoActivo = null; carrito = [];
+    document.getElementById('mercado').style.display='none';
+    document.getElementById('pantalla').classList.remove('oculto');
+    mostrar('inicio');
+}
+</script>
+</body>
+</html>
