@@ -93,6 +93,7 @@
 const CORREO_ADMIN = "admin@tutienda.com";
 const CLAVE_ADMIN = "admin123";
 
+// Inicializar base de datos si no existe
 if(!localStorage.getItem('base_usuarios')){
     let baseUsuarios = [];
     baseUsuarios.push({
@@ -105,6 +106,7 @@ if(!localStorage.getItem('base_usuarios')){
 let correoActivo = localStorage.getItem('sesionActiva') || null;
 let carrito = [];
 
+// Cargar sesión guardada al abrir la página
 window.onload = function(){
     if(correoActivo){
         let todos = JSON.parse(localStorage.getItem('base_usuarios'));
@@ -121,6 +123,7 @@ window.onload = function(){
     }
 };
 
+// Función para cambiar pantallas de acceso
 function mostrar(que){
     document.querySelectorAll('.caja').forEach(c=>c.classList.add('oculto'));
     document.getElementById(que).classList.remove('oculto');
@@ -138,6 +141,7 @@ function guardarCambios(usuario){
     localStorage.setItem('base_usuarios', JSON.stringify(todos));
 }
 
+// Función de registro corregida
 function registrar(){
     let correo = document.getElementById('correoReg').value.trim().toLowerCase();
     let clave = document.getElementById('claveReg').value;
@@ -152,15 +156,17 @@ function registrar(){
     todos.push({ correo, clave, saldo: 3000, retiros: [], historialCompras: [], esAdmin: false });
     localStorage.setItem('base_usuarios', JSON.stringify(todos));
     msg.textContent='✅ Cuenta creada'; msg.className='mensaje exito';
-    setTimeout(()=>mostrar('login'), 1000);
+    setTimeout(()=>mostrar('login'), 1200);
 }
 
+// Función de inicio de sesión corregida
 function entrar(){
     let correo = document.getElementById('correoLog').value.trim().toLowerCase();
     let clave = document.getElementById('claveLog').value;
     let msg = document.getElementById('msgLog');
     let todos = JSON.parse(localStorage.getItem('base_usuarios'));
     let usu = todos.find(u => u.correo === correo && u.clave === clave);
+    
     if(!usu){ msg.textContent='Datos incorrectos'; msg.className='mensaje error'; return; }
     
     correoActivo = correo;
@@ -223,7 +229,7 @@ function cambiarSaldo(correo){
     panelAdmin();
 }
 
-// ✅ PANTALLA DE INICIO ACTUALIZADA COMO PEDISTE
+// Pantalla de inicio como pediste
 function iniMercado(){
     let usu = darUsuario();
     document.getElementById('contenido').innerHTML=`
@@ -395,11 +401,4 @@ function hacerRetiro(){
         valor:monto, fecha:new Date().toLocaleString("es-CO"), 
         banco:banco, cuenta:cuenta, tipo:tipo, estado:'Pendiente'
     });
-    guardarCambios(usu);
-    alert(`✅ Retiro solicitado:\nMonto: $${monto.toLocaleString("es-CO")}\nA: ${banco} - ${cuenta}`);
-    iniMercado();
-}
-
-function verCuenta(){
-    let usu = darUsuario();
-    doc
+    guard
