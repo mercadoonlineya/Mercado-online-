@@ -45,6 +45,7 @@
         .compra-total{font-weight:bold;color:#166534;margin-top:5px;}
         .retiro-datos{text-align:left;margin:15px 0;}
         .retiro-datos label{display:block;margin:8px 0 4px;font-weight:bold;}
+        .opcion-inicio{background:#f9f9f9;padding:15px;border-radius:10px;border:1px solid #ddd;text-align:left;}
     </style>
 </head>
 <body>
@@ -92,7 +93,6 @@
 const CORREO_ADMIN = "admin@tutienda.com";
 const CLAVE_ADMIN = "admin123";
 
-// Inicializar base de usuarios si no existe
 if(!localStorage.getItem('base_usuarios')){
     let baseUsuarios = [];
     baseUsuarios.push({
@@ -102,11 +102,9 @@ if(!localStorage.getItem('base_usuarios')){
     localStorage.setItem('base_usuarios', JSON.stringify(baseUsuarios));
 }
 
-// ✅ RECORDAR SESIÓN INICIADA
 let correoActivo = localStorage.getItem('sesionActiva') || null;
 let carrito = [];
 
-// Al cargar la página: si hay sesión guardada, entra automáticamente
 window.onload = function(){
     if(correoActivo){
         let todos = JSON.parse(localStorage.getItem('base_usuarios'));
@@ -166,7 +164,7 @@ function entrar(){
     if(!usu){ msg.textContent='Datos incorrectos'; msg.className='mensaje error'; return; }
     
     correoActivo = correo;
-    localStorage.setItem('sesionActiva', correo); // ✅ GUARDAR SESIÓN
+    localStorage.setItem('sesionActiva', correo);
     document.getElementById('pantalla').classList.add('oculto');
     document.getElementById('mercado').style.display='block';
     cargarMenu();
@@ -225,6 +223,7 @@ function cambiarSaldo(correo){
     panelAdmin();
 }
 
+// ✅ PANTALLA DE INICIO ACTUALIZADA COMO PEDISTE
 function iniMercado(){
     let usu = darUsuario();
     document.getElementById('contenido').innerHTML=`
@@ -232,8 +231,37 @@ function iniMercado(){
         <div class="logo-icon">🛒</div>
         <h2>¡Bienvenido!</h2>
         <p>Tu correo: <strong>${usu.correo}</strong></p>
-        <p>Tu saldo: <strong>$${usu.saldo.toLocaleString("es-CO")}</strong></p>
-        <button onclick="verProds()">🛍️ Ir a comprar</button>
+        <p>Tu saldo disponible: <strong>$${usu.saldo.toLocaleString("es-CO")}</strong></p>
+        <br>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;text-align:left;">
+            <div class="opcion-inicio">
+                <h4>🎯 Puntos de compra</h4>
+                <p>Conoce los lugares cercanos para recibir tus pedidos</p>
+                <button style="width:auto;padding:8px 12px;font-size:14px;">Ver puntos</button>
+            </div>
+
+            <div class="opcion-inicio">
+                <h4>📍 Dirección</h4>
+                <p>Agrega o cambia tu dirección de entrega</p>
+                <button style="width:auto;padding:8px 12px;font-size:14px;">Editar dirección</button>
+            </div>
+
+            <div class="opcion-inicio">
+                <h4>🚚 Rastreo de envío</h4>
+                <p>Revisa dónde va tu pedido en tiempo real</p>
+                <button style="width:auto;padding:8px 12px;font-size:14px;">Rastrear</button>
+            </div>
+
+            <div class="opcion-inicio">
+                <h4>💳 Crédito</h4>
+                <p>Consulta tu cupo y formas de pago</p>
+                <button style="width:auto;padding:8px 12px;font-size:14px;">Ver crédito</button>
+            </div>
+        </div>
+        <br>
+
+        <button onclick="verProds()">🛍️ Ir a comprar productos</button>
     </div>`;
 }
 
@@ -374,20 +402,4 @@ function hacerRetiro(){
 
 function verCuenta(){
     let usu = darUsuario();
-    document.getElementById('contenido').innerHTML = `
-    <div class="tarjeta" style="text-align:center;"><h3>👤 Tu Cuenta</h3><p>Correo: ${usu.correo}</p></div>
-    <div class="saldo"><p>Saldo disponible</p><h2>$${usu.saldo.toLocaleString("es-CO")}</h2></div>
-    <div class="tarjeta"><button class="gris" onclick="salir()">🚪 Cerrar sesión</button></div>`;
-}
-
-function salir(){
-    correoActivo = null; 
-    localStorage.removeItem('sesionActiva'); // ✅ BORRAR SESIÓN AL SALIR
-    carrito = [];
-    document.getElementById('mercado').style.display='none';
-    document.getElementById('pantalla').classList.remove('oculto');
-    mostrar('inicio');
-}
-</script>
-</body>
-</html>
+    doc
