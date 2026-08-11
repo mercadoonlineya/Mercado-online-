@@ -92,17 +92,36 @@
 const CORREO_ADMIN = "admin@tutienda.com";
 const CLAVE_ADMIN = "admin123";
 
-localStorage.removeItem('base_usuarios');
+// Inicializar base de usuarios si no existe
+if(!localStorage.getItem('base_usuarios')){
+    let baseUsuarios = [];
+    baseUsuarios.push({
+        correo: CORREO_ADMIN, clave: CLAVE_ADMIN, saldo: 0,
+        retiros: [], historialCompras: [], esAdmin: true
+    });
+    localStorage.setItem('base_usuarios', JSON.stringify(baseUsuarios));
+}
 
-let baseUsuarios = [];
-baseUsuarios.push({
-    correo: CORREO_ADMIN, clave: CLAVE_ADMIN, saldo: 0,
-    retiros: [], historialCompras: [], esAdmin: true
-});
-localStorage.setItem('base_usuarios', JSON.stringify(baseUsuarios));
-
-let correoActivo = null;
+// ✅ RECORDAR SESIÓN INICIADA
+let correoActivo = localStorage.getItem('sesionActiva') || null;
 let carrito = [];
+
+// Al cargar la página: si hay sesión guardada, entra automáticamente
+window.onload = function(){
+    if(correoActivo){
+        let todos = JSON.parse(localStorage.getItem('base_usuarios'));
+        let usu = todos.find(u => u.correo === correoActivo);
+        if(usu){
+            document.getElementById('pantalla').classList.add('oculto');
+            document.getElementById('mercado').style.display='block';
+            cargarMenu();
+            iniMercado();
+        }else{
+            localStorage.removeItem('sesionActiva');
+            correoActivo = null;
+        }
+    }
+};
 
 function mostrar(que){
     document.querySelectorAll('.caja').forEach(c=>c.classList.add('oculto'));
@@ -147,6 +166,7 @@ function entrar(){
     if(!usu){ msg.textContent='Datos incorrectos'; msg.className='mensaje error'; return; }
     
     correoActivo = correo;
+    localStorage.setItem('sesionActiva', correo); // ✅ GUARDAR SESIÓN
     document.getElementById('pantalla').classList.add('oculto');
     document.getElementById('mercado').style.display='block';
     cargarMenu();
@@ -361,7 +381,9 @@ function verCuenta(){
 }
 
 function salir(){
-    correoActivo = null; carrito = [];
+    correoActivo = null; 
+    localStorage.removeItem('sesionActiva'); // ✅ BORRAR SESIÓN AL SALIR
+    carrito = [];
     document.getElementById('mercado').style.display='none';
     document.getElementById('pantalla').classList.remove('oculto');
     mostrar('inicio');
