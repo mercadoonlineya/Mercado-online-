@@ -45,7 +45,6 @@
         .compra-total{font-weight:bold;color:#166534;margin-top:5px;}
         .retiro-datos{text-align:left;margin:15px 0;}
         .retiro-datos label{display:block;margin:8px 0 4px;font-weight:bold;}
-        .opcion-inicio{background:#f9f9f9;padding:15px;border-radius:10px;border:1px solid #ddd;text-align:left;}
     </style>
 </head>
 <body>
@@ -93,7 +92,6 @@
 const CORREO_ADMIN = "admin@tutienda.com";
 const CLAVE_ADMIN = "admin123";
 
-// Inicializar base de datos si no existe
 if(!localStorage.getItem('base_usuarios')){
     let baseUsuarios = [];
     baseUsuarios.push({
@@ -106,7 +104,6 @@ if(!localStorage.getItem('base_usuarios')){
 let correoActivo = localStorage.getItem('sesionActiva') || null;
 let carrito = [];
 
-// Cargar sesión guardada al abrir la página
 window.onload = function(){
     if(correoActivo){
         let todos = JSON.parse(localStorage.getItem('base_usuarios'));
@@ -123,7 +120,6 @@ window.onload = function(){
     }
 };
 
-// Función para cambiar pantallas de acceso
 function mostrar(que){
     document.querySelectorAll('.caja').forEach(c=>c.classList.add('oculto'));
     document.getElementById(que).classList.remove('oculto');
@@ -141,7 +137,6 @@ function guardarCambios(usuario){
     localStorage.setItem('base_usuarios', JSON.stringify(todos));
 }
 
-// Función de registro corregida
 function registrar(){
     let correo = document.getElementById('correoReg').value.trim().toLowerCase();
     let clave = document.getElementById('claveReg').value;
@@ -153,20 +148,19 @@ function registrar(){
     if(correo === CORREO_ADMIN){ msg.textContent='Solo para el dueño'; msg.className='mensaje error'; return; }
     if(todos.find(u => u.correo === correo)){ msg.textContent='Ya existe esta cuenta'; msg.className='mensaje error'; return; }
 
-    todos.push({ correo, clave, saldo: 3000, retiros: [], historialCompras: [], esAdmin: false });
+    // ✅ AHORA LOS USUARIOS NUEVOS EMPIEZAN CON SALDO 0
+    todos.push({ correo, clave, saldo: 0, retiros: [], historialCompras: [], esAdmin: false });
     localStorage.setItem('base_usuarios', JSON.stringify(todos));
     msg.textContent='✅ Cuenta creada'; msg.className='mensaje exito';
-    setTimeout(()=>mostrar('login'), 1200);
+    setTimeout(()=>mostrar('login'), 1000);
 }
 
-// Función de inicio de sesión corregida
 function entrar(){
     let correo = document.getElementById('correoLog').value.trim().toLowerCase();
     let clave = document.getElementById('claveLog').value;
     let msg = document.getElementById('msgLog');
     let todos = JSON.parse(localStorage.getItem('base_usuarios'));
     let usu = todos.find(u => u.correo === correo && u.clave === clave);
-    
     if(!usu){ msg.textContent='Datos incorrectos'; msg.className='mensaje error'; return; }
     
     correoActivo = correo;
@@ -229,7 +223,6 @@ function cambiarSaldo(correo){
     panelAdmin();
 }
 
-// Pantalla de inicio como pediste
 function iniMercado(){
     let usu = darUsuario();
     document.getElementById('contenido').innerHTML=`
@@ -237,37 +230,8 @@ function iniMercado(){
         <div class="logo-icon">🛒</div>
         <h2>¡Bienvenido!</h2>
         <p>Tu correo: <strong>${usu.correo}</strong></p>
-        <p>Tu saldo disponible: <strong>$${usu.saldo.toLocaleString("es-CO")}</strong></p>
-        <br>
-
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;text-align:left;">
-            <div class="opcion-inicio">
-                <h4>🎯 Puntos de compra</h4>
-                <p>Conoce los lugares cercanos para recibir tus pedidos</p>
-                <button style="width:auto;padding:8px 12px;font-size:14px;">Ver puntos</button>
-            </div>
-
-            <div class="opcion-inicio">
-                <h4>📍 Dirección</h4>
-                <p>Agrega o cambia tu dirección de entrega</p>
-                <button style="width:auto;padding:8px 12px;font-size:14px;">Editar dirección</button>
-            </div>
-
-            <div class="opcion-inicio">
-                <h4>🚚 Rastreo de envío</h4>
-                <p>Revisa dónde va tu pedido en tiempo real</p>
-                <button style="width:auto;padding:8px 12px;font-size:14px;">Rastrear</button>
-            </div>
-
-            <div class="opcion-inicio">
-                <h4>💳 Crédito</h4>
-                <p>Consulta tu cupo y formas de pago</p>
-                <button style="width:auto;padding:8px 12px;font-size:14px;">Ver crédito</button>
-            </div>
-        </div>
-        <br>
-
-        <button onclick="verProds()">🛍️ Ir a comprar productos</button>
+        <p>Tu saldo: <strong>$${usu.saldo.toLocaleString("es-CO")}</strong></p>
+        <button onclick="verProds()">🛍️ Ir a comprar</button>
     </div>`;
 }
 
@@ -401,4 +365,27 @@ function hacerRetiro(){
         valor:monto, fecha:new Date().toLocaleString("es-CO"), 
         banco:banco, cuenta:cuenta, tipo:tipo, estado:'Pendiente'
     });
-    guard
+    guardarCambios(usu);
+    alert(`✅ Retiro solicitado:\nMonto: $${monto.toLocaleString("es-CO")}\nA: ${banco} - ${cuenta}`);
+    iniMercado();
+}
+
+function verCuenta(){
+    let usu = darUsuario();
+    document.getElementById('contenido').innerHTML = `
+    <div class="tarjeta" style="text-align:center;"><h3>👤 Tu Cuenta</h3><p>Correo: ${usu.correo}</p></div>
+    <div class="saldo"><p>Saldo disponible</p><h2>$${usu.saldo.toLocaleString("es-CO")}</h2></div>
+    <div class="tarjeta"><button class="gris" onclick="salir()">🚪 Cerrar sesión</button></div>`;
+}
+
+function salir(){
+    correoActivo = null; 
+    localStorage.removeItem('sesionActiva');
+    carrito = [];
+    document.getElementById('mercado').style.display='none';
+    document.getElementById('pantalla').classList.remove('oculto');
+    mostrar('inicio');
+}
+</script>
+</body>
+</html>
