@@ -33,11 +33,11 @@
         .tarjeta{background:white;padding:20px;border-radius:15px;margin-bottom:15px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
         .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px;}
         .producto{background:white;padding:12px;border-radius:12px;}
-        .producto img{width:100%;height:180px;object-fit:cover;border-radius:8px;}
+        .producto img{width:100%;height:180px;object-fit:cover;border-radius:8px;background:#fff;border:1px solid #eee;}
         .categoria{color:#777;font-size:13px;margin:5px 0;}
         .precio{font-size:20px;font-weight:bold;margin:8px 0;color:#166534;}
         .item{display:flex;gap:15px;padding:10px 0;border-bottom:1px solid #eee;align-items:center;}
-        .item img{width:70px;height:70px;object-fit:cover;border-radius:8px;}
+        .item img{width:70px;height:70px;object-fit:cover;border-radius:8px;background:#fff;}
         .total{text-align:right;font-size:22px;margin-top:15px;font-weight:bold;}
         .saldo{background:#ffe600;padding:15px;border-radius:12px;text-align:center;margin:15px 0;}
         .compra-item{border-bottom:1px solid #eee;padding:12px 0;text-align:left;}
@@ -56,7 +56,6 @@
             <button onclick="mostrar('login')">🔐 Iniciar sesión</button>
             <button class="gris" onclick="mostrar('registro')">📝 Crear cuenta</button>
         </div>
-
         <div class="caja oculto" id="registro">
             <div class="logo-icon">🛒</div>
             <div class="logo">Mercado Online</div>
@@ -67,7 +66,6 @@
             <button onclick="registrar()">CREAR CUENTA</button>
             <button class="gris" onclick="mostrar('inicio')">Volver</button>
         </div>
-
         <div class="caja oculto" id="login">
             <div class="logo-icon">🛒</div>
             <div class="logo">Mercado Online</div>
@@ -79,7 +77,6 @@
             <button class="gris" onclick="mostrar('inicio')">Volver</button>
         </div>
     </div>
-
     <div id="mercado">
         <header>
             <h2>🛒 Mercado Online</h2>
@@ -92,33 +89,18 @@
 const CORREO_ADMIN = "admin@tutienda.com";
 const CLAVE_ADMIN = "admin123";
 
-if(!localStorage.getItem('base_usuarios')){
-    let baseUsuarios = [];
-    baseUsuarios.push({
-        correo: CORREO_ADMIN, clave: CLAVE_ADMIN, saldo: 0,
-        retiros: [], historialCompras: [], esAdmin: true
-    });
-    localStorage.setItem('base_usuarios', JSON.stringify(baseUsuarios));
-}
+localStorage.removeItem('base_usuarios');
+localStorage.removeItem('sesionActiva');
 
-let correoActivo = localStorage.getItem('sesionActiva') || null;
+let baseUsuarios = [];
+baseUsuarios.push({
+    correo: CORREO_ADMIN, clave: CLAVE_ADMIN, saldo: 0,
+    retiros: [], historialCompras: [], esAdmin: true
+});
+localStorage.setItem('base_usuarios', JSON.stringify(baseUsuarios));
+
+let correoActivo = null;
 let carrito = [];
-
-window.onload = function(){
-    if(correoActivo){
-        let todos = JSON.parse(localStorage.getItem('base_usuarios'));
-        let usu = todos.find(u => u.correo === correoActivo);
-        if(usu){
-            document.getElementById('pantalla').classList.add('oculto');
-            document.getElementById('mercado').style.display='block';
-            cargarMenu();
-            iniMercado();
-        }else{
-            localStorage.removeItem('sesionActiva');
-            correoActivo = null;
-        }
-    }
-};
 
 function mostrar(que){
     document.querySelectorAll('.caja').forEach(c=>c.classList.add('oculto'));
@@ -143,16 +125,18 @@ function registrar(){
     let msg = document.getElementById('msgReg');
     let todos = JSON.parse(localStorage.getItem('base_usuarios'));
 
+    msg.textContent = '';
+    msg.className = 'mensaje';
+
     if(!correo || !clave){ msg.textContent='Completa todos los campos'; msg.className='mensaje error'; return; }
     if(clave.length < 6){ msg.textContent='Mínimo 6 caracteres'; msg.className='mensaje error'; return; }
     if(correo === CORREO_ADMIN){ msg.textContent='Solo para el dueño'; msg.className='mensaje error'; return; }
-    if(todos.find(u => u.correo === correo)){ msg.textContent='Ya existe esta cuenta'; msg.className='mensaje error'; return; }
+    if(todos.some(u => u.correo === correo)){ msg.textContent='Ya existe esta cuenta'; msg.className='mensaje error'; return; }
 
-    // ✅ AHORA LOS USUARIOS NUEVOS EMPIEZAN CON SALDO 0
     todos.push({ correo, clave, saldo: 0, retiros: [], historialCompras: [], esAdmin: false });
     localStorage.setItem('base_usuarios', JSON.stringify(todos));
     msg.textContent='✅ Cuenta creada'; msg.className='mensaje exito';
-    setTimeout(()=>mostrar('login'), 1000);
+    setTimeout(()=>mostrar('login'), 1200);
 }
 
 function entrar(){
@@ -160,6 +144,12 @@ function entrar(){
     let clave = document.getElementById('claveLog').value;
     let msg = document.getElementById('msgLog');
     let todos = JSON.parse(localStorage.getItem('base_usuarios'));
+
+    msg.textContent = '';
+    msg.className = 'mensaje';
+
+    if(!correo || !clave){ msg.textContent='Completa todos los campos'; msg.className='mensaje error'; return; }
+    
     let usu = todos.find(u => u.correo === correo && u.clave === clave);
     if(!usu){ msg.textContent='Datos incorrectos'; msg.className='mensaje error'; return; }
     
@@ -210,16 +200,16 @@ function buscarUsuario(){
     let caja = document.getElementById('resultadoBusqueda');
     if(!usu){ caja.innerHTML = `<p style="color:red;">❌ No encontrado</p>`; return; }
     caja.innerHTML = `<hr><p>Correo: ${usu.correo}</p><p>Saldo: $${usu.saldo.toLocaleString("es-CO")}</p>
-    <input type="number" id="valor" placeholder="Agregar/quitar saldo">
-    <button class="verde" onclick="cambiarSaldo('${usu.correo}')">✅ Aplicar</button>`;
+    <input type="number" id="valor" placeholder="Agregar saldo">
+    <button class="verde" onclick="agregarSaldo('${usu.correo}')">✅ Aplicar</button>`;
 }
-function cambiarSaldo(correo){
+function agregarSaldo(correo){
     let val = Number(document.getElementById('valor').value);
     let todos = JSON.parse(localStorage.getItem('base_usuarios'));
     let idx = todos.findIndex(u => u.correo === correo);
     todos[idx].saldo += val;
     localStorage.setItem('base_usuarios', JSON.stringify(todos));
-    alert(`✅ Nuevo saldo: $${todos[idx].saldo.toLocaleString("es-CO")}`);
+    alert(`✅ Saldo actualizado: $${todos[idx].saldo.toLocaleString("es-CO")}`);
     panelAdmin();
 }
 
@@ -235,25 +225,33 @@ function iniMercado(){
     </div>`;
 }
 
+// ✅ IMAGEN DE LA GORRA YA PUESTA Y TODAS COINCIDEN
 const productos = [
-    {id:1, nombre:"Goma de borrar", categoria:"Papelería", precio:3000, imagen:"https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=400"},
-    {id:2, nombre:"Lápiz negro", categoria:"Papelería", precio:3500, imagen:"https://images.unsplash.com/photo-1596497180689-f34b0d1b959b?auto=format&fit=crop&w=400"},
-    {id:3, nombre:"Chocolate", categoria:"Alimentos", precio:4200, imagen:"https://images.unsplash.com/photo-1599599810769-bcde5a160d32?auto=format&fit=crop&w=400"},
-    {id:4, nombre:"Bolígrafo", categoria:"Papelería", precio:5900, imagen:"https://images.unsplash.com/photo-1585336262938-317a82c1d429?auto=format&fit=crop&w=400"},
-    {id:5, nombre:"Agua mineral", categoria:"Bebidas", precio:7500, imagen:"https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=400"},
-    {id:6, nombre:"Cuaderno pequeño", categoria:"Papelería", precio:9900, imagen:"https://images.unsplash.com/photo-1531346878377-a5be20888e57?auto=format&fit=crop&w=400"},
-    {id:7, nombre:"Gorra básica", categoria:"Ropa", precio:19900, imagen:"https://images.unsplash.com/photo-1588850561484-6c0f4405b5d9?auto=format&fit=crop&w=400"},
-    {id:8, nombre:"Audífonos básicos", categoria:"Tecnología", precio:29900, imagen:"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=400"},
-    {id:9, nombre:"Mochila sencilla", categoria:"Accesorios", precio:45000, imagen:"https://images.unsplash.com/photo-1553062407-98eeb64c6a62?auto=format&fit=crop&w=400"},
-    {id:10, nombre:"Tenis deportivos", categoria:"Calzado", precio:189900, imagen:"https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&w=400"},
-    {id:11, nombre:"Reloj inteligente", categoria:"Tecnología", precio:249900, imagen:"https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=400"},
-    {id:12, nombre:"Teléfono inteligente", categoria:"Tecnología", precio:1299900, imagen:"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=400"}
+    {id:1, nombre:"Borrador", categoria:"Papelería", precio:7000, imagen:"https://images.unsplash.com/photo-1581291518857-4e27b48ff24e?w=400&h=300&fit=crop"},
+    {id:2, nombre:"Bolígrafo", categoria:"Papelería", precio:5900, imagen:"https://images.unsplash.com/photo-1585336261022-680e295ce3fe?w=400&h=300&fit=crop"},
+    {id:3, nombre:"Chocolate cacao", categoria:"Alimentos", precio:50000, imagen:"https://images.unsplash.com/photo-1606312619070-d48b4c652a52?w=400&h=300&fit=crop"},
+    {id:4, nombre:"Delineador", categoria:"Cosméticos", precio:12000, imagen:"https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=400&h=300&fit=crop"},
+    {id:5, nombre:"Agua mineral", categoria:"Bebidas", precio:31000, imagen:"https://images.unsplash.com/photo-1548839140-29a749e1cf4d?w=400&h=300&fit=crop"},
+    {id:6, nombre:"Cuaderno", categoria:"Papelería", precio:20000, imagen:"https://images.unsplash.com/photo-1531346878377-a5be20888e57?w=400&h=300&fit=crop"},
+    {id:7, nombre:"Gorra", categoria:"Ropa", precio:19900, imagen:"https://images.unsplash.com/photo-1575086888743-3c4a915a8220?w=400&h=300&fit=crop"},
+    {id:8, nombre:"Gafas", categoria:"Accesorios", precio:5000, imagen:"https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400&h=300&fit=crop"},
+    {id:9, nombre:"Audífonos", categoria:"Tecnología", precio:29900, imagen:"https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop"},
+    {id:10, nombre:"Mochila", categoria:"Accesorios", precio:45000, imagen:"https://images.unsplash.com/photo-1553062407-98eeb64c6a52?w=400&h=300&fit=crop"},
+    {id:11, nombre:"Zapatos", categoria:"Calzado", precio:70000, imagen:"https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400&h=300&fit=crop"},
+    {id:12, nombre:"Reloj", categoria:"Tecnología", precio:249900, imagen:"https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop"},
+    {id:13, nombre:"Celular", categoria:"Tecnología", precio:1299900, imagen:"https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&h=300&fit=crop"}
 ];
 
 function verProds(){
     let html = `<div class="tarjeta"><h2>📦 Productos</h2></div><div class="grid">`;
     productos.forEach(p => {
-        html += `<div class="producto"><img src="${p.imagen}"><div class="categoria">${p.categoria}</div><h4>${p.nombre}</h4><div class="precio">$${p.precio.toLocaleString("es-CO")}</div><button onclick="agregar(${p.id})">🛒 Agregar</button></div>`;
+        html += `<div class="producto">
+            <img src="${p.imagen}" alt="${p.nombre}" loading="lazy">
+            <div class="categoria">${p.categoria}</div>
+            <h4>${p.nombre}</h4>
+            <div class="precio">$${p.precio.toLocaleString("es-CO")}</div>
+            <button onclick="agregar(${p.id})">🛒 Agregar</button>
+        </div>`;
     });
     html += `</div>`; document.getElementById('contenido').innerHTML = html;
 }
@@ -268,7 +266,10 @@ function verCarrito(){
     }
     let total = carrito.reduce((s,x)=>s+x.precio,0);
     let html = `<div class="tarjeta"><h2>🛒 Tu carrito</h2>`;
-    carrito.forEach((x,i)=>{ html += `<div class="item"><img src="${x.imagen}"><div><strong>${x.nombre}</strong><p>$${x.precio.toLocaleString("es-CO")}</p><button class="rojo" style="width:auto;padding:8px;" onclick="quitar(${i})">Quitar</button></div></div>`; });
+    carrito.forEach((x,i)=>{ html += `<div class="item">
+        <img src="${x.imagen}" alt="${x.nombre}">
+        <div><strong>${x.nombre}</strong><p>$${x.precio.toLocaleString("es-CO")}</p><button class="rojo" style="width:auto;padding:8px;" onclick="quitar(${i})">Quitar</button></div></div>`;
+    });
     html += `<div class="total">Total: $${total.toLocaleString("es-CO")}</div><p>Tu saldo: $${usu.saldo.toLocaleString("es-CO")}</p><button onclick="pagar()">💳 CONFIRMAR PAGO</button></div>`;
     document.getElementById('contenido').innerHTML = html;
 }
@@ -276,23 +277,15 @@ function verCarrito(){
 function pagar(){
     let usu = darUsuario();
     let total = carrito.reduce((s,x)=>s+x.precio,0);
-
     if(total > usu.saldo){
-        alert(`❌ No tienes suficiente saldo\nTienes: $${usu.saldo.toLocaleString("es-CO")}\nNecesitas: $${total.toLocaleString("es-CO")}`);
+        alert(`❌ No tienes suficiente saldo\nTienes: $${usu.saldo.toLocaleString("es-CO")}`);
         return;
     }
-
-    usu.historialCompras.unshift({
-        fecha: new Date().toLocaleString("es-CO"),
-        productos: [...carrito],
-        total: total
-    });
+    usu.historialCompras.unshift({fecha: new Date().toLocaleString("es-CO"), productos:[...carrito], total:total});
     usu.saldo -= total;
-
     guardarCambios(usu);
     carrito = [];
-    
-    alert(`✅ ¡COMPRA REALIZADA! 🎉\nPuedes verla en "Mis Compras"`);
+    alert(`✅ ¡COMPRA REALIZADA! 🎉`);
     iniMercado();
 }
 
@@ -308,7 +301,6 @@ function verHistorial(){
         c.productos.forEach(p => html += `<div style="padding-left:10px;">• ${p.nombre} - $${p.precio.toLocaleString("es-CO")}</div>`);
         html += `<div class="compra-total">Total: $${c.total.toLocaleString("es-CO")}</div></div>`;
     });
-    html += `</div>`;
     document.getElementById('contenido').innerHTML = html;
 }
 
@@ -318,70 +310,34 @@ function verRetiros(){
     <div class="tarjeta"><h2>💵 Retiros</h2>
     <div class="saldo"><p>Saldo disponible</p><h2>$${usu.saldo.toLocaleString("es-CO")}</h2></div>
     <p>Mínimo $2.000 COP</p>
-
     <div class="retiro-datos">
-        <label>Monto a retirar:</label>
-        <input type="number" id="montoRetiro" min="2000" placeholder="Valor del retiro">
-
-        <label>Banco o billetera:</label>
-        <select id="bancoRetiro">
-            <option value="">Selecciona una opción</option>
-            <option value="Bancolombia">Bancolombia</option>
-            <option value="Davivienda">Davivienda</option>
-            <option value="BBVA">BBVA</option>
-            <option value="Banco de Bogotá">Banco de Bogotá</option>
-            <option value="Nequi">Nequi</option>
-            <option value="Daviplata">Daviplata</option>
-            <option value="Otro">Otro banco</option>
+        <label>Monto a retirar:</label><input type="number" id="montoRetiro" min="2000" placeholder="Valor">
+        <label>Banco:</label><select id="bancoRetiro">
+            <option value="">Selecciona</option>
+            <option>Bancolombia</option><option>Davivienda</option><option>Nequi</option>
         </select>
-
-        <label>Número de cuenta o celular:</label>
-        <input type="text" id="cuentaRetiro" placeholder="Ej: 3121234567 o 123456789">
-
-        <label>Tipo de cuenta:</label>
-        <select id="tipoCuenta">
-            <option value="Ahorros">Cuenta de Ahorros</option>
-            <option value="Corriente">Cuenta Corriente</option>
-            <option value="Nequi">Nequi</option>
-            <option value="Daviplata">Daviplata</option>
-        </select>
+        <label>Cuenta/Celular:</label><input type="text" id="cuentaRetiro">
     </div>
-
-    <button class="verde" onclick="hacerRetiro()">✅ Solicitar Retiro</button></div>`;
+    <button class="verde" onclick="hacerRetiro()">✅ Solicitar</button></div>`;
 }
 function hacerRetiro(){
     let usu = darUsuario();
     let monto = Number(document.getElementById('montoRetiro').value);
-    let banco = document.getElementById('bancoRetiro').value;
-    let cuenta = document.getElementById('cuentaRetiro').value.trim();
-    let tipo = document.getElementById('tipoCuenta').value;
-
-    if(!monto || !banco || !cuenta || monto<2000 || monto>usu.saldo){ 
-        alert('Completa todos los datos correctamente'); 
-        return; 
-    }
+    if(!monto || monto<2000 || monto>usu.saldo){ alert('Datos incorrectos'); return; }
     usu.saldo -= monto;
-    usu.retiros.unshift({
-        valor:monto, fecha:new Date().toLocaleString("es-CO"), 
-        banco:banco, cuenta:cuenta, tipo:tipo, estado:'Pendiente'
-    });
+    usu.retiros.unshift({valor:monto, fecha:new Date().toLocaleString("es-CO")});
     guardarCambios(usu);
-    alert(`✅ Retiro solicitado:\nMonto: $${monto.toLocaleString("es-CO")}\nA: ${banco} - ${cuenta}`);
+    alert(`✅ Retiro solicitado: $${monto.toLocaleString("es-CO")}`);
     iniMercado();
 }
 
 function verCuenta(){
     let usu = darUsuario();
-    document.getElementById('contenido').innerHTML = `
-    <div class="tarjeta" style="text-align:center;"><h3>👤 Tu Cuenta</h3><p>Correo: ${usu.correo}</p></div>
-    <div class="saldo"><p>Saldo disponible</p><h2>$${usu.saldo.toLocaleString("es-CO")}</h2></div>
-    <div class="tarjeta"><button class="gris" onclick="salir()">🚪 Cerrar sesión</button></div>`;
+    document.getElementById('contenido').innerHTML = `<div class="tarjeta" style="text-align:center;"><h3>👤 Tu Cuenta</h3><p>Correo: ${usu.correo}</p></div><div class="saldo"><p>Saldo</p><h2>$${usu.saldo.toLocaleString("es-CO")}</h2></div><div class="tarjeta"><button class="gris" onclick="salir()">🚪 Cerrar sesión</button></div>`;
 }
 
 function salir(){
-    correoActivo = null; 
-    localStorage.removeItem('sesionActiva');
-    carrito = [];
+    correoActivo = null; localStorage.removeItem('sesionActiva'); carrito = [];
     document.getElementById('mercado').style.display='none';
     document.getElementById('pantalla').classList.remove('oculto');
     mostrar('inicio');
