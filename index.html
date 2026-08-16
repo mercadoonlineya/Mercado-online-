@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -105,11 +104,13 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 
-const CORREO_ADMIN = "fuelpazvictor774@gmail.com;
+// ✅ TU CORREO DE ADMINISTRADOR YA PUESTO
+const CORREO_ADMIN = "fuelpazvictor774@gmail.com";
+
 let usuarioActivo = null;
 let carrito = [];
 
-// ✅ CONEXIÓN DIRECTA DE TODOS LOS BOTONES AL CARGAR LA PÁGINA
+// ✅ CONEXIÓN SEGURA DE TODOS LOS BOTONES
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnIrLogin').addEventListener('click', ()=>mostrar('login'));
     document.getElementById('btnIrRegistro').addEventListener('click', ()=>mostrar('registro'));
