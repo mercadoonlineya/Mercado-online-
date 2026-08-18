@@ -107,7 +107,7 @@ const db = firebase.database();
 const CORREO_ADMIN = "fuelpazvictor774@gmail.com";
 let usuarioActivo = null;
 let carrito = [];
-let uidEncontrado = ""; // ✅ Variable segura para guardar el usuario buscado
+let uidEncontrado = "";
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnIrLogin').addEventListener('click', ()=>mostrar('login'));
@@ -222,10 +222,8 @@ async function panelAdmin(){
     <div id="resultadoBusqueda"></div></div>`;
 }
 
-// ✅ FUNCIÓN DE BÚSQUEDA CORREGIDA 100%
 async function buscarUsuario(){
     const correo = document.getElementById('buscarCorreo').value.trim().toLowerCase();
-    // Busca DIRECTAMENTE por correo, no lee toda la base
     const snap = await db.ref("usuarios").orderByChild("correo").equalTo(correo).once('value');
     
     if(!snap.exists()){
@@ -246,7 +244,6 @@ async function buscarUsuario(){
     });
 }
 
-// ✅ FUNCIÓN DE AGREGAR SALDO SIN ERRORES
 async function agregarSaldo(){
     const val = Number(document.getElementById('val').value);
     if(!uidEncontrado) return alert('Primero busca un usuario');
@@ -290,31 +287,65 @@ function verProds(){
     html += `</div>`; document.getElementById('contenido').innerHTML = html;
 }
 
+// ✅ CARRITO CON BOTÓN QUE FUNCIONA — USAMOS onclick DIRECTAMENTE
 async function verCarrito(){
     const usu = await darUsuario();
     if(!carrito.length) return document.getElementById('contenido').innerHTML=`<div class="tarjeta" style="text-align:center;"><h3>🛒 Carrito vacío</h3><button onclick="verProds()">Ver productos</button></div>`;
     const total = carrito.reduce((s,x)=>s+x.precio,0);
     let html = `<div class="tarjeta"><h2>🛒 Tu carrito</h2>`;
     carrito.forEach((x,i)=>html += `<div class="item"><img src="${x.imagen}"><div><strong>${x.nombre}</strong><p>$${x.precio.toLocaleString("es-CO")}</p><button class="rojo" style="width:auto;padding:8px;" onclick="carrito.splice(${i},1);verCarrito()">Quitar</button></div></div>`);
+    // ✅ SOLUCIÓN DEFINITIVA: onclick="pagar()" DIRECTAMENTE
     html += `<div class="total">Total: $${total.toLocaleString("es-CO")}</div><p>Tu saldo: $${Number(usu.saldo).toLocaleString("es-CO")}</p><button onclick="pagar()">💳 CONFIRMAR PAGO</button></div>`;
     document.getElementById('contenido').innerHTML = html;
 }
 
+// ✅ FUNCIÓN PAGAR — AHORA SÍ SE LLAMA CORRECTAMENTE
 async function pagar(){
-    const usu = await darUsuario();
-    const total = carrito.reduce((s,x)=>s+x.precio,0);
-    if(total > Number(usu.saldo)) return alert(`❌ Saldo insuficiente\nTienes: $${Number(usu.saldo).toLocaleString("es-CO")}`);
-    usu.historialCompras.unshift({fecha:new Date().toLocaleString("es-CO"), productos:[...carrito], total});
-    usu.saldo -= total;
-    await guardarCambios(usu);
-    carrito = []; alert('✅ ¡COMPRA REALIZADA! 🎉'); iniMercado();
+    try{
+        const usu = await darUsuario();
+        if(!usu) return alert('❌ Sesión no encontrada');
+        
+        const total = carrito.reduce((s,x)=>s+x.precio,0);
+        if(total <= 0) return alert('❌ El carrito está vacío');
+
+        if(total > Number(usu.saldo)) {
+            return alert(`❌ Saldo insuficiente\nTotal a pagar: $${total.toLocaleString("es-CO")}\nTu saldo: $${Number(usu.saldo).toLocaleString("es-CO")}`);
+        }
+
+        // ✅ Registra la compra en el historial
+        if(!usu.historialCompras) usu.historialCompras = [];
+        usu.historialCompras.unshift({
+            fecha: new Date().toLocaleString("es-CO"),
+            productos: [...carrito],
+            total: total
+        });
+
+        // ✅ Descuenta el saldo
+        usu.saldo = Number(usu.saldo) - total;
+
+        // ✅ Guarda todo en Firebase
+        await guardarCambios(usu);
+
+        carrito = [];
+        alert('✅ ¡COMPRA REALIZADA CON ÉXITO! 🎉');
+        iniMercado();
+    }catch(e){
+        alert('❌ Error al procesar el pago: ' + e.message);
+        console.error(e);
+    }
 }
 
 async function verHistorial(){
     const usu = await darUsuario();
     if(!usu.historialCompras?.length) return document.getElementById('contenido').innerHTML=`<div class="tarjeta" style="text-align:center;"><h3>🧾 No tienes compras</h3><button onclick="verProds()">Ir a comprar</button></div>`;
-    let html = `<div class="tarjeta"><h2>🧾 Historial</h2>`;
-    usu.historialCompras.forEach(c=>{ html += `<div class="compra-item"><div class="compra-fecha">📅 ${c.fecha}</div>`; c.productos.forEach(p=>html+=`<div style="padding-left:10px;">• ${p.nombre} - $${p.precio.toLocaleString("es-CO")}</div>`); html += `<div class="compra-total">Total: $${c.total.toLocaleString("es-CO")}</div></div>`; });
+    let html = `<div class="tarjeta"><h2>🧾 Historial de Compras</h2>`;
+    usu.historialCompras.forEach(c=>{ 
+        html += `<div class="compra-item">
+            <div class="compra-fecha">📅 ${c.fecha}</div>`; 
+            c.productos.forEach(p=>html+=`<div style="padding-left:10px;">• ${p.nombre} - $${p.precio.toLocaleString("es-CO")}</div>`); 
+            html += `<div class="compra-total">Total: $${c.total.toLocaleString("es-CO")}</div>
+        </div>`; 
+    });
     document.getElementById('contenido').innerHTML = html;
 }
 
@@ -332,7 +363,7 @@ async function hacerRetiro(){
     const usu = await darUsuario();
     const monto = Number(document.getElementById('montoR').value);
     if(!monto || monto<2000 || monto>usu.saldo) return alert('Datos incorrectos');
-    usu.saldo -= monto;
+    usu.saldo = Number(usu.saldo) - monto;
     usu.retiros = usu.retiros || [];
     usu.retiros.unshift({valor:monto, fecha:new Date().toLocaleString("es-CO")});
     await guardarCambios(usu); alert(`✅ Retiro: $${monto.toLocaleString("es-CO")}`); iniMercado();
@@ -351,5 +382,4 @@ async function salir(){
 }
 </script>
 </body>
-    </html>
-
+</html>
